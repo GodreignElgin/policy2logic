@@ -1,0 +1,68 @@
+name: policy_to_logic_env
+version: "1.0.0"
+description: >
+  An RL environment where AI agents learn to convert natural language
+  access control policies into executable logic rules through iterative
+  interaction, clarification, and feedback.
+author: "OpenEnv Hackathon Team"
+tags:
+  - openenv
+  - rl
+  - policy
+  - access-control
+  - reasoning
+
+environment:
+  entry_point: "policy_to_logic_env.server.app:app"
+  python_version: ">=3.10"
+
+tasks:
+  - name: data_access
+    difficulty: easy
+    description: "Convert a simple data access policy into logic rules"
+    max_steps: 5
+
+  - name: resource_access
+    difficulty: medium
+    description: "Convert a role-based resource access policy with ambiguous parameters"
+    max_steps: 7
+
+  - name: transaction_approval
+    difficulty: hard
+    description: "Convert a complex financial transaction policy with hidden thresholds"
+    max_steps: 7
+
+action_space:
+  type: structured
+  fields:
+    action_type:
+      type: enum
+      values: ["ask_clarification", "propose_rules", "refine_rules"]
+    content:
+      type: string
+      description: "JSON payload for the action"
+
+observation_space:
+  type: structured
+  fields:
+    policy_text: { type: string }
+    task_name: { type: string }
+    step_number: { type: integer }
+    max_steps: { type: integer }
+    clarification_response: { type: string, nullable: true }
+    test_results: { type: object, nullable: true }
+    current_accuracy: { type: float }
+    feedback: { type: string, nullable: true }
+
+reward:
+  range: [0.0, 1.0]
+  type: dense
+  components:
+    - name: accuracy
+      weight: 0.50
+    - name: improvement
+      weight: 0.20
+    - name: efficiency
+      weight: 0.15
+    - name: clarification_quality
+      weight: 0.15

@@ -1,0 +1,18 @@
+[project]
+name = "policy-to-logic-env"
+version = "1.0.0"
+description = "An OpenEnv RL environment for policy-to-logic reasoning"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "requests>=2.25.0",
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "httpx>=0.24.0",
+]
