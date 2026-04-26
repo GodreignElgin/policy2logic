@@ -403,9 +403,9 @@ class TrainingLoop:
         global_episode = 0
 
         for task in TASKS:
-            self.logger.info(f"\n{'─'*40}")
+            self.logger.info(f"\n{'-'*40}")
             self.logger.info(f"TASK: {task}")
-            self.logger.info(f"{'─'*40}")
+            self.logger.info(f"{'-'*40}")
 
             task_rewards = []
             task_accuracies = []

@@ -1,7 +1,7 @@
 import json
 import os
 
-with open("training/trajectory_optimizer.py", "r") as f:
+with open("training/trajectory_optimizer.py", "r", encoding="utf-8") as f:
     traj_code = f.read()
 
 notebook = {
@@ -167,7 +167,7 @@ notebook = {
  ]
 }
 
-with open("training/colab_training.ipynb", "w") as f:
+with open("training/colab_training.ipynb", "w", encoding="utf-8") as f:
     json.dump(notebook, f, indent=1)
 
-print("Colab Notebook updated successfully")
+print("Colab Notebook updated successfully with UTF-8 encoding")
