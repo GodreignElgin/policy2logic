@@ -1,0 +1,242 @@
+[
+  {
+    "global_episode": 1,
+    "task": "data_access",
+    "episode_in_task": 1,
+    "total_reward": 0.727,
+    "final_accuracy": 0.9800000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 0
+  },
+  {
+    "global_episode": 2,
+    "task": "data_access",
+    "episode_in_task": 2,
+    "total_reward": 0.727,
+    "final_accuracy": 0.9800000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 1
+  },
+  {
+    "global_episode": 3,
+    "task": "data_access",
+    "episode_in_task": 3,
+    "total_reward": 0.7164999999999999,
+    "final_accuracy": 0.9600000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 4,
+    "task": "data_access",
+    "episode_in_task": 4,
+    "total_reward": 0.727,
+    "final_accuracy": 0.9800000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 5,
+    "task": "data_access",
+    "episode_in_task": 5,
+    "total_reward": 0.7164999999999999,
+    "final_accuracy": 0.9600000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 6,
+    "task": "data_access",
+    "episode_in_task": 6,
+    "total_reward": 0.7164999999999999,
+    "final_accuracy": 0.9600000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 7,
+    "task": "data_access",
+    "episode_in_task": 7,
+    "total_reward": 0.926,
+    "final_accuracy": 0.8931428571428572,
+    "success": true,
+    "num_steps": 2,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 8,
+    "task": "data_access",
+    "episode_in_task": 8,
+    "total_reward": 0.727,
+    "final_accuracy": 0.9800000000000001,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 9,
+    "task": "resource_access",
+    "episode_in_task": 1,
+    "total_reward": 1.203,
+    "final_accuracy": 0.9571428571428572,
+    "success": true,
+    "num_steps": 2,
+    "few_shots_used": 0
+  },
+  {
+    "global_episode": 10,
+    "task": "resource_access",
+    "episode_in_task": 2,
+    "total_reward": 2.4044999999999996,
+    "final_accuracy": 0.9108571428571428,
+    "success": true,
+    "num_steps": 7,
+    "few_shots_used": 1
+  },
+  {
+    "global_episode": 11,
+    "task": "resource_access",
+    "episode_in_task": 3,
+    "total_reward": 1.111,
+    "final_accuracy": 0.9057142857142858,
+    "success": true,
+    "num_steps": 4,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 12,
+    "task": "resource_access",
+    "episode_in_task": 4,
+    "total_reward": 0.74,
+    "final_accuracy": 0.772,
+    "success": false,
+    "num_steps": 2,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 13,
+    "task": "resource_access",
+    "episode_in_task": 5,
+    "total_reward": 0.6920000000000001,
+    "final_accuracy": 0.9057142857142858,
+    "success": true,
+    "num_steps": 3,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 14,
+    "task": "resource_access",
+    "episode_in_task": 6,
+    "total_reward": 1.3940000000000001,
+    "final_accuracy": 0.76,
+    "success": false,
+    "num_steps": 4,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 15,
+    "task": "resource_access",
+    "episode_in_task": 7,
+    "total_reward": 1.041,
+    "final_accuracy": 0.9,
+    "success": true,
+    "num_steps": 3,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 16,
+    "task": "resource_access",
+    "episode_in_task": 8,
+    "total_reward": 2.594,
+    "final_accuracy": 0.84,
+    "success": false,
+    "num_steps": 7,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 17,
+    "task": "transaction_approval",
+    "episode_in_task": 1,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 0
+  },
+  {
+    "global_episode": 18,
+    "task": "transaction_approval",
+    "episode_in_task": 2,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 1
+  },
+  {
+    "global_episode": 19,
+    "task": "transaction_approval",
+    "episode_in_task": 3,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 20,
+    "task": "transaction_approval",
+    "episode_in_task": 4,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 21,
+    "task": "transaction_approval",
+    "episode_in_task": 5,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 22,
+    "task": "transaction_approval",
+    "episode_in_task": 6,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 23,
+    "task": "transaction_approval",
+    "episode_in_task": 7,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  },
+  {
+    "global_episode": 24,
+    "task": "transaction_approval",
+    "episode_in_task": 8,
+    "total_reward": 0.742,
+    "final_accuracy": 0.9857142857142858,
+    "success": true,
+    "num_steps": 1,
+    "few_shots_used": 2
+  }
+]

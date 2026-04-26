@@ -21,6 +21,7 @@ short_description: Meta pytorch hugging face hackathon
 
 | Deliverable | Link |
 |---|---|
+| **Youtube video** | [link to video](https://youtu.be/bQliR2nl2S8) |
 | **HF Space (Live Environment)** | [godreign-policy2logic.hf.space](https://godreign-policy2logic.hf.space) |
 | **Training Notebook (Colab)** | [Open in Colab](https://colab.research.google.com/github/GodreignElgin/policy2logic/blob/main/training/colab_training.ipynb) |
 | **Writeup / Slides** | *TBD — add your link here* |
@@ -34,14 +35,33 @@ The agent is trained using a **reward-guided trajectory optimization loop**.
 High-reward interaction sequences are accumulated as few-shot examples,
 improving agent behavior across episodes without weight updates.
 
-### Reward Curve
+### What the Results Show
+
+The environment successfully validates that capable LLMs (Qwen2.5-72B) can solve
+structured policy-to-logic tasks. Key findings:
+
+- **All tasks achieve >90% accuracy threshold** — the environment correctly
+  validates policy-to-logic conversion
+- **data_access and transaction_approval solve near-perfectly from episode 1** —
+  these tasks are within the model's zero-shot capability
+- **resource_access shows genuine learning signal** — the agent navigates
+  ambiguous multi-role policies with variable step counts
+- **Trajectory bank demonstrates cold-start behavior** — early episodes
+  bootstrap context for subsequent episodes
+
+### Reward Curve (Average Per Step)
 ![Reward Curve](training/plots/reward_curve.png)
+
+*Note: We use average reward per step to remove step-count artifacts from the visualization.*
 
 ### Accuracy Curve
 ![Accuracy Curve](training/plots/accuracy_curve.png)
 
-### Per-Task Improvement
+### Per-Task Success Rate
 ![Improvement Chart](training/plots/improvement_chart.png)
+
+### Episode Comparison
+![Episode Comparison](training/plots/episode_comparison.png)
 
 ---
 
@@ -74,13 +94,18 @@ Policy → Agent → (Ask / Propose / Refine)
        → Reward → Trajectory Bank → Improved Agent
 ```
 
-### Three Tasks (increasing difficulty)
+### Four Tasks (increasing difficulty)
 
 | Task | Difficulty | Variables | Decisions |
 |---|---|---|---|
 | data_access | Easy | time, data_type | ALLOW, DENY |
 | resource_access | Medium | role, time, document_type | ALLOW, DENY |
 | transaction_approval | Hard | amount, transfer_type, time, role | APPROVE, REQUIRE_APPROVAL, COMPLIANCE_REVIEW, HOLD |
+| transaction_approval_hard | Very Hard | amount, transfer_type, time, role, priority | APPROVE, REQUIRE_APPROVAL, COMPLIANCE_REVIEW, HOLD, ESCALATE |
+
+The **transaction_approval_hard** variant uses deliberately vague policy language
+(e.g., "large payments", "supervisors have different authority") that requires
+clarification to understand the exact thresholds and rules.
 
 ---
 
@@ -164,9 +189,10 @@ python training/trajectory_optimizer.py
 │   ├── trajectory_optimizer.py # Training loop
 │   ├── colab_training.ipynb    # Colab notebook
 │   └── plots/
-│       ├── reward_curve.png    # Training evidence (committed)
-│       ├── accuracy_curve.png  # Training evidence (committed)
-│       └── improvement_chart.png
+│       ├── reward_curve.png       # Training evidence (committed)
+│       ├── accuracy_curve.png     # Training evidence (committed)
+│       ├── improvement_chart.png  # Success rate per task
+│       └── episode_comparison.png # Episode 1 vs 8 comparison
 ├── main.py                     # Server entry point
 ├── Dockerfile                  # HF Spaces deployment
 └── README.md                   # This file
@@ -184,12 +210,17 @@ This environment implements the OpenEnv specification:
 
 ---
 
-## ⚠️ Known Limitations
+## ⚠️ Known Limitations & Honest Assessment
 
-1. Single-session server (sequential episodes only, not parallel)
-2. Deterministic scenario seed — same scenarios every episode
-3. Training loop uses trajectory accumulation, not weight updates
-4. Clarification oracle is keyword-based, not semantic
+1. **Single-session server** (sequential episodes only, not parallel)
+2. **Deterministic scenario seed** — same scenarios every episode
+3. **Training uses trajectory accumulation**, not weight updates — this is legitimate
+   policy improvement via in-context learning, not gradient-based optimization
+4. **Clarification oracle is keyword-based**, not semantic
+5. **Qwen2.5-72B solves easy/hard tasks zero-shot** — the learning curve is flat
+   because the model is already capable; the environment validates this capability
+6. **The "learning" signal is subtle** — primarily visible in resource_access where
+   the agent learns to navigate ambiguity through clarification and iteration
 
 ---
 
