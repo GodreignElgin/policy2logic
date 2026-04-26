@@ -1,9 +1,10 @@
 ---
-title: Hackathon
-emoji: 🐢
-colorFrom: indigo
-colorTo: purple
+title: EthicsGuard
+emoji: 🏆
+colorFrom: blue
+colorTo: green
 sdk: docker
+app_port: 7860
 pinned: false
 short_description: Meta pytorch hugging face hackathon
 ---
