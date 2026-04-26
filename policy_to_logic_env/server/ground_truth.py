@@ -133,11 +133,23 @@ def _ground_truth_transaction_approval(s: dict) -> str:
 
 def answer_clarification(task_name: str, question: str) -> str:
     """
-    Deterministic clarification oracle.
+    Deterministic clarification oracle with progressive revelation.
 
-    Matches question text against known keywords for the given task
-    and returns a structured answer. If no match is found, returns
-    a generic response.
+    Uses compound keyword matching to provide layered answers:
+      - Vague questions (match short keywords) → partial, potentially
+        ambiguous truths that may mislead if taken at face value.
+      - Specific questions (match long/compound keywords) → precise,
+        ground-truth-aligned answers.
+
+    Compound keywords: if a keyword contains spaces, ALL space-separated
+    words must appear anywhere in the question (order-independent).
+    More matched keywords = higher priority (more specific answer wins).
+
+    This design supports RL training where agents must learn to:
+      1. Detect ambiguity in initial policy text
+      2. Ask targeted questions to resolve ambiguity
+      3. Recognize when earlier (vague) answers were misleading
+      4. Reconcile contradictory signals by drilling deeper
 
     Args:
         task_name: Current task name
@@ -149,22 +161,28 @@ def answer_clarification(task_name: str, question: str) -> str:
     task = get_task(task_name)
     question_lower = question.lower().strip()
 
-    # Check each keyword in the clarification map
     best_match = None
-    best_match_len = 0
+    best_match_score = (0, 0)  # (num_parts, total_length)
 
     for keyword, answer in task.clarification_map.items():
-        if keyword.lower() in question_lower:
-            # Prefer longer keyword matches (more specific)
-            if len(keyword) > best_match_len:
+        keyword_lower = keyword.lower()
+        keyword_parts = keyword_lower.split()
+
+        # ALL parts of the keyword must appear in the question
+        if all(part in question_lower for part in keyword_parts):
+            # Score: more keyword parts = more specific = higher priority
+            # Tiebreak by total keyword length
+            score = (len(keyword_parts), len(keyword_lower))
+            if score > best_match_score:
                 best_match = answer
-                best_match_len = len(keyword)
+                best_match_score = score
 
     if best_match:
         return best_match
 
     return (
         "I can provide information about the specific terms and parameters "
-        "mentioned in the policy. Please ask about a specific aspect such as "
-        "time constraints, roles, thresholds, or document/data types."
+        "mentioned in the policy. Try asking about specific aspects like "
+        "time boundaries, exact thresholds, role-specific permissions, "
+        "or how specific edge cases are handled."
     )
