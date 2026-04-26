@@ -15,6 +15,9 @@ tags:
 environment:
   entry_point: "policy_to_logic_env.server.app:app"
   python_version: ">=3.10"
+  reset_endpoint: /reset
+  step_endpoint: /step
+  state_endpoint: /state
 
 tasks:
   - name: data_access
