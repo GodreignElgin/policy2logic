@@ -1,5 +1,5 @@
 ---
-title: EthicsGuard
+title: Policy2Logic
 emoji: 🏆
 colorFrom: blue
 colorTo: green
