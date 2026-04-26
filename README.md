@@ -22,6 +22,7 @@ short_description: Meta pytorch hugging face hackathon
 | Deliverable | Link |
 |---|---|
 | **Youtube video** | [link to video](https://youtu.be/bQliR2nl2S8) |
+| **Medium Blog** | [Link to Blog](https://medium.com/@godreignelgin/policy-to-logic-rl-environment-61da6176ff9c) |
 | **HF Space (Live Environment)** | [godreign-policy2logic.hf.space](https://godreign-policy2logic.hf.space) |
 | **Training Notebook (Colab)** | [Open in Colab](https://colab.research.google.com/github/GodreignElgin/policy2logic/blob/main/training/colab_training.ipynb) |
 | **Writeup / Slides** | *TBD — add your link here* |
