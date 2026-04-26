@@ -13,6 +13,8 @@ import json
 import os
 import time
 import requests
+import logging
+import wandb
 from dataclasses import dataclass, field
 from typing import Optional
 from openai import OpenAI
@@ -106,14 +108,15 @@ class Agent:
         observation: dict,
         step_number: int,
         episode_history: list[str],
-        few_shot_examples: list[Trajectory]
+        few_shot_examples: list[Trajectory],
+        task_name: str = ""
     ) -> tuple[str, str]:
         """
         Returns (action_type, content_json_string).
         action_type: one of ask_clarification | propose_rules | refine_rules
         content: JSON string appropriate for that action
         """
-        system_prompt = self._build_system_prompt(few_shot_examples)
+        system_prompt = self._build_system_prompt(few_shot_examples, task_name)
         user_prompt = self._build_user_prompt(observation, step_number, episode_history)
 
         try:
@@ -132,7 +135,7 @@ class Agent:
             print(f"    [LLM ERROR] {e}")
             return "propose_rules", json.dumps({"rules": [], "default": "DENY"})
 
-    def _build_system_prompt(self, few_shot_examples: list[Trajectory]) -> str:
+    def _build_system_prompt(self, few_shot_examples: list[Trajectory], task_name: str = "") -> str:
         base = """You are a policy-to-logic agent. Your job is to convert natural language policies into executable rules.
 
 AVAILABLE ACTIONS:
@@ -164,6 +167,39 @@ STRATEGY:
 OUTPUT FORMAT: Respond ONLY with valid JSON. No markdown. No explanation.
 {"action_type": "propose_rules", "content": "{...escaped json string...}"}
 """
+        # Task-specific guidance for complex tasks
+        if task_name == "transaction_approval":
+            base += """
+IMPORTANT — TRANSACTION APPROVAL TASK:
+This task has 4 possible decisions: APPROVE, REQUIRE_APPROVAL, COMPLIANCE_REVIEW, HOLD
+Rules are evaluated TOP-TO-BOTTOM. Order matters critically. You MUST order rules by priority:
+  1. FIRST: Check if transfer_type == "international" → then COMPLIANCE_REVIEW (always, overrides everything)
+  2. SECOND: Check if amount >= 10000 AND time is outside business hours (hour < 9 or hour >= 17) → then HOLD
+  3. THIRD: Check if amount > 5000 AND initiator_role != "manager" → then REQUIRE_APPROVAL
+  4. DEFAULT: APPROVE
+
+Key details:
+- Standard limit is $5,000 (amount > 5000 triggers approval, NOT >=)
+- High-value threshold is $10,000 (amount >= 10000)
+- Business hours: hour >= 9 AND hour < 17
+- Manager exemption ONLY applies to the standard $5,000 limit, NOT to international or high-value HOLD rules
+- "system" role follows the same rules as "employee"
+
+Here is a working example of valid rules for this task:
+{"rules": [{"if": [{"field": "transfer_type", "op": "==", "value": "international"}], "then": "COMPLIANCE_REVIEW"}, {"if": [{"field": "amount", "op": ">=", "value": 10000}, {"field": "time", "op": ">=", "value": 17}], "then": "HOLD"}, {"if": [{"field": "amount", "op": ">=", "value": 10000}, {"field": "time", "op": "<", "value": 9}], "then": "HOLD"}, {"if": [{"field": "amount", "op": ">", "value": 5000}, {"field": "initiator_role", "op": "!=", "value": "manager"}], "then": "REQUIRE_APPROVAL"}], "default": "APPROVE"}
+"""
+        elif task_name == "resource_access":
+            base += """
+IMPORTANT — RESOURCE ACCESS TASK:
+This task has roles: junior, senior, contractor. Document types: public, internal, confidential.
+- Senior employees: ALLOW everything always
+- Contractors: ALLOW only public, DENY everything else
+- Junior + confidential: ALWAYS DENY (regardless of time — the policy is misleading about this)
+- Junior + internal: ALLOW only during business hours (hour >= 8 AND hour < 17)
+- Junior + public: ALLOW always
+- Business hours: hour >= 8 AND hour < 17
+"""
+
         if few_shot_examples:
             base += "\n\nLEARNED FROM PREVIOUS EPISODES (high-reward strategies):\n"
             for traj in few_shot_examples[-TOP_K_TRAJECTORIES:]:
@@ -255,6 +291,19 @@ class TrainingLoop:
         self.bank = TrajectoryBank()
         self.metrics = []  # List of {episode, task, reward, accuracy, success}
 
+        os.makedirs("training/logs", exist_ok=True)
+        log_filename = f"training/logs/run_{int(time.time())}.log"
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler(log_filename),
+                logging.StreamHandler()  # also print to console
+            ]
+        )
+        self.logger = logging.getLogger("TrainingLoop")
+        self.log_file = log_filename
+
     def run_episode(self, task_name: str, episode_id: int) -> Trajectory:
         """Run a single episode and return the trajectory."""
         few_shots = self.bank.get_examples(task_name)
@@ -266,7 +315,7 @@ class TrainingLoop:
         done = result.get("done", False)
         history = []
 
-        print(f"  [Episode {episode_id}] task={task_name} few_shots={len(few_shots)}")
+        self.logger.info(f"START episode={episode_id} task={task_name} few_shots_available={len(few_shots)}")
 
         step_num = 0
         while not done and step_num < obs.get("max_steps", 7):
@@ -277,7 +326,8 @@ class TrainingLoop:
                 observation=obs,
                 step_number=step_num,
                 episode_history=history,
-                few_shot_examples=few_shots
+                few_shot_examples=few_shots,
+                task_name=task_name
             )
 
             # Execute action
@@ -303,7 +353,7 @@ class TrainingLoop:
             # Update history
             history.append(f"Step {step_num}: {action_type} → reward={reward:.2f} acc={step.accuracy:.2f}")
 
-            print(f"    step={step_num} action={action_type} reward={reward:.3f} acc={step.accuracy:.2f}")
+            self.logger.info(f"STEP episode={episode_id} step={step_num} action={action_type} reward={reward:.4f} accuracy={step.accuracy:.4f}")
 
             if done:
                 episode_score = info.get("episode_score", obs.get("current_accuracy", 0.0))
@@ -314,28 +364,48 @@ class TrainingLoop:
         if not trajectory.steps:
             trajectory.final_accuracy = 0.0
 
+        self.logger.info(f"END episode={episode_id} task={task_name} total_reward={trajectory.total_reward:.4f} final_accuracy={trajectory.final_accuracy:.4f} success={trajectory.success} steps={len(trajectory.steps)}")
+
         return trajectory
 
     def run(self):
         """Run full training loop across all tasks."""
-        print("=" * 60)
-        print("REWARD-GUIDED TRAJECTORY OPTIMIZATION")
-        print(f"Tasks: {TASKS}")
-        print(f"Episodes per task: {NUM_EPISODES_PER_TASK}")
-        print(f"Top-K trajectories: {TOP_K_TRAJECTORIES}")
-        print("=" * 60)
+        self.logger.info("=" * 60)
+        self.logger.info("REWARD-GUIDED TRAJECTORY OPTIMIZATION")
+        self.logger.info(f"Tasks: {TASKS}")
+        self.logger.info(f"Episodes per task: {NUM_EPISODES_PER_TASK}")
+        self.logger.info(f"Top-K trajectories: {TOP_K_TRAJECTORIES}")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Log file: {self.log_file}")
+
+        try:
+            wandb.init(
+                project="policy-to-logic-rl",
+                name=f"trajectory-opt-{int(time.time())}",
+                config={
+                    "num_episodes_per_task": NUM_EPISODES_PER_TASK,
+                    "top_k_trajectories": TOP_K_TRAJECTORIES,
+                    "min_reward_threshold": MIN_REWARD_THRESHOLD,
+                    "model": MODEL,
+                    "temperature": TEMPERATURE,
+                    "tasks": TASKS,
+                    "env_url": ENV_BASE_URL,
+                }
+            )
+        except Exception as e:
+            self.logger.warning(f"Wandb init failed: {e}. Continuing without W&B.")
 
         # Health check
         if not self.env.health():
             raise RuntimeError(f"Environment not reachable at {ENV_BASE_URL}")
-        print(f"Environment: OK ({ENV_BASE_URL})\n")
+        self.logger.info(f"Environment: OK ({ENV_BASE_URL})\n")
 
         global_episode = 0
 
         for task in TASKS:
-            print(f"\n{'─'*40}")
-            print(f"TASK: {task}")
-            print(f"{'─'*40}")
+            self.logger.info(f"\n{'─'*40}")
+            self.logger.info(f"TASK: {task}")
+            self.logger.info(f"{'─'*40}")
 
             task_rewards = []
             task_accuracies = []
@@ -346,6 +416,20 @@ class TrainingLoop:
 
                 # Store in bank
                 self.bank.store(trajectory)
+
+                try:
+                    wandb.log({
+                        f"{task}/total_reward": trajectory.total_reward,
+                        f"{task}/final_accuracy": trajectory.final_accuracy,
+                        f"{task}/num_steps": len(trajectory.steps),
+                        f"{task}/success": int(trajectory.success),
+                        f"{task}/few_shots_used": len(self.bank.get_examples(task)),
+                        "global/total_reward": trajectory.total_reward,
+                        "global/final_accuracy": trajectory.final_accuracy,
+                        "episode": global_episode,
+                    })
+                except Exception:
+                    pass
 
                 # Record metrics
                 self.metrics.append({
@@ -362,18 +446,23 @@ class TrainingLoop:
                 task_rewards.append(trajectory.total_reward)
                 task_accuracies.append(trajectory.final_accuracy)
 
-                print(f"  → Episode {ep} complete: reward={trajectory.total_reward:.3f} accuracy={trajectory.final_accuracy:.2f} success={trajectory.success}")
+                self.logger.info(f"  → Episode {ep} complete: reward={trajectory.total_reward:.3f} accuracy={trajectory.final_accuracy:.2f} success={trajectory.success}")
                 time.sleep(0.5)  # Rate limiting
 
-            print(f"\n  Task summary:")
-            print(f"    First episode reward: {task_rewards[0]:.3f}")
-            print(f"    Last episode reward:  {task_rewards[-1]:.3f}")
-            print(f"    Improvement: {task_rewards[-1] - task_rewards[0]:+.3f}")
+            self.logger.info(f"\n  Task summary:")
+            self.logger.info(f"    First episode reward: {task_rewards[0]:.3f}")
+            self.logger.info(f"    Last episode reward:  {task_rewards[-1]:.3f}")
+            self.logger.info(f"    Improvement: {task_rewards[-1] - task_rewards[0]:+.3f}")
 
-        print("\n" + "=" * 60)
-        print("TRAINING COMPLETE")
-        print(f"Bank summary: {self.bank.summary()}")
-        print("=" * 60)
+        self.logger.info("\n" + "=" * 60)
+        self.logger.info("TRAINING COMPLETE")
+        self.logger.info(f"Bank summary: {self.bank.summary()}")
+        self.logger.info("=" * 60)
+
+        try:
+            wandb.finish()
+        except Exception:
+            pass
 
         return self.metrics
 
@@ -406,7 +495,7 @@ def save_plots(metrics: list[dict]):
         "transaction_approval": "#4CAF50"
     }
 
-    # ── Plot 1: Reward Curve ──────────────────────────────────────────────────
+    # ── Plot 1: Reward Curve (per-task trend lines) ────────────────────────────
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for task in TASKS:
@@ -414,11 +503,12 @@ def save_plots(metrics: list[dict]):
         task_rews = [m["total_reward"] for m in metrics if m["task"] == task]
         ax.plot(task_eps, task_rews, marker="o", label=task,
                 color=colors.get(task, "gray"), linewidth=2, markersize=5)
-
-    # Trend line
-    z = np.polyfit(episodes, rewards, 1)
-    p = np.poly1d(z)
-    ax.plot(episodes, p(episodes), "--", color="red", alpha=0.5, linewidth=1.5, label="overall trend")
+        # Per-task trend line
+        if len(task_eps) >= 2:
+            z = np.polyfit(task_eps, task_rews, 1)
+            p = np.poly1d(z)
+            ax.plot(task_eps, p(task_eps), "--",
+                    color=colors.get(task, "gray"), alpha=0.4, linewidth=1.5)
 
     ax.set_xlabel("Episode")
     ax.set_ylabel("Total Reward")
@@ -455,32 +545,52 @@ def save_plots(metrics: list[dict]):
     plt.close()
     print("Saved: training/plots/accuracy_curve.png")
 
-    # ── Plot 3: Per-Task Improvement Bar Chart ────────────────────────────────
-    fig, ax = plt.subplots(figsize=(8, 5))
+    # ── Plot 3: Per-Task Summary (Accuracy + Efficiency) ──────────────────────
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-    task_names = []
-    improvements = []
+    task_labels = []
+    acc_improvements = []
+    eff_improvements = []
+    best_accuracies = []
 
     for task in TASKS:
-        task_accs = [m["final_accuracy"] for m in metrics if m["task"] == task]
-        if len(task_accs) >= 2:
-            first = task_accs[0]
-            last = task_accs[-1]
-            task_names.append(task.replace("_", "\n"))
-            improvements.append(last - first)
+        task_data = [m for m in metrics if m["task"] == task]
+        if len(task_data) >= 2:
+            task_labels.append(task.replace("_", "\n"))
+            acc_improvements.append(task_data[-1]["final_accuracy"] - task_data[0]["final_accuracy"])
+            # Efficiency: steps saved (first vs best)
+            first_steps = task_data[0]["num_steps"]
+            best_steps = min(m["num_steps"] for m in task_data)
+            eff_pct = ((first_steps - best_steps) / first_steps * 100) if first_steps > 0 else 0
+            eff_improvements.append(eff_pct)
+            best_accuracies.append(max(m["final_accuracy"] for m in task_data))
 
-    bars = ax.bar(task_names, improvements,
-                  color=["#2196F3", "#FF9800", "#4CAF50"][:len(task_names)],
-                  edgecolor="white", linewidth=1.5)
+    # Left: Best accuracy per task
+    bars1 = axes[0].bar(task_labels, best_accuracies,
+                        color=["#2196F3", "#FF9800", "#4CAF50"][:len(task_labels)],
+                        edgecolor="white", linewidth=1.5)
+    axes[0].axhline(y=0.9, color="red", linestyle="--", alpha=0.7, label="success threshold")
+    axes[0].set_ylabel("Best Accuracy Achieved")
+    axes[0].set_title("Best Accuracy Per Task")
+    axes[0].set_ylim(0, 1.1)
+    axes[0].grid(True, axis="y", alpha=0.3)
+    axes[0].legend()
+    for bar, val in zip(bars1, best_accuracies):
+        axes[0].text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02,
+                     f"{val:.0%}", ha="center", va="bottom", fontweight="bold")
 
-    ax.axhline(y=0, color="black", linewidth=0.8)
-    ax.set_ylabel("Accuracy Improvement (last - first episode)")
-    ax.set_title("Per-Task Improvement from Trajectory Accumulation")
-    ax.grid(True, axis="y", alpha=0.3)
-
-    for bar, val in zip(bars, improvements):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
-                f"{val:+.2f}", ha="center", va="bottom", fontweight="bold")
+    # Right: Efficiency improvement (% steps saved)
+    bars2 = axes[1].bar(task_labels, eff_improvements,
+                        color=["#2196F3", "#FF9800", "#4CAF50"][:len(task_labels)],
+                        edgecolor="white", linewidth=1.5)
+    axes[1].axhline(y=0, color="black", linewidth=0.8)
+    axes[1].set_ylabel("Steps Saved (%)")
+    axes[1].set_title("Efficiency Improvement (First → Best Episode)")
+    axes[1].grid(True, axis="y", alpha=0.3)
+    for bar, val in zip(bars2, eff_improvements):
+        y_pos = max(bar.get_height() + 1, 2)
+        axes[1].text(bar.get_x() + bar.get_width() / 2, y_pos,
+                     f"{val:.0f}%", ha="center", va="bottom", fontweight="bold")
 
     plt.tight_layout()
     plt.savefig("training/plots/improvement_chart.png", dpi=150, bbox_inches="tight")
@@ -488,9 +598,12 @@ def save_plots(metrics: list[dict]):
     print("Saved: training/plots/improvement_chart.png")
 
     # ── Save raw metrics as JSON ──────────────────────────────────────────────
-    with open("training/plots/metrics.json", "w") as f:
+    timestamp = int(time.time())
+    with open(f"training/plots/metrics_{timestamp}.json", "w") as f:
         json.dump(metrics, f, indent=2)
-    print("Saved: training/plots/metrics.json")
+    with open("training/plots/metrics_latest.json", "w") as f:
+        json.dump(metrics, f, indent=2)
+    print(f"Saved: training/plots/metrics_{timestamp}.json and metrics_latest.json")
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
 

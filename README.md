@@ -24,6 +24,7 @@ short_description: Meta pytorch hugging face hackathon
 | **HF Space (Live Environment)** | [godreign-policy2logic.hf.space](https://godreign-policy2logic.hf.space) |
 | **Training Notebook (Colab)** | [Open in Colab](https://colab.research.google.com/github/GodreignElgin/policy2logic/blob/main/training/colab_training.ipynb) |
 | **Writeup / Slides** | *TBD — add your link here* |
+| **Experiment Tracking (W&B)** | [Wandb Project](https://wandb.ai/YOUR_USERNAME/policy-to-logic-rl) |
 
 ---
 
@@ -41,6 +42,15 @@ improving agent behavior across episodes without weight updates.
 
 ### Per-Task Improvement
 ![Improvement Chart](training/plots/improvement_chart.png)
+
+---
+
+## 📈 Experiment Tracking
+
+All training runs are logged to Weights & Biases.
+Metrics tracked per episode: total reward, final accuracy, steps used, success rate, few-shot examples used.
+
+Live dashboard: [wandb.ai/YOUR_USERNAME/policy-to-logic-rl](https://wandb.ai/YOUR_USERNAME/policy-to-logic-rl)
 
 ---
 
