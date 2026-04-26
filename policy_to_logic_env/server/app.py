@@ -99,6 +99,26 @@ async def get_state():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/")
+async def root():
+    """Root endpoint - handles HF Spaces probes and provides API info."""
+    return {
+        "name": "Policy-to-Logic RL Environment",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "GET /": "This endpoint",
+            "GET /health": "Health check",
+            "GET /tasks": "List available tasks",
+            "POST /reset": "Start new episode",
+            "POST /step": "Take an action",
+            "GET /state": "Get current state",
+        },
+        "docs": "/docs",
+        "redoc": "/redoc",
+    }
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""
