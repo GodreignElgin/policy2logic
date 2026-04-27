@@ -96,7 +96,7 @@ All of this is intentionally simple in v1. The DSL can be extended with OR logic
 | **Live Environment** | [godreign-policy2logic.hf.space](https://godreign-policy2logic.hf.space) |
 | **Training Notebook** | [Open in Colab](https://colab.research.google.com/github/GodreignElgin/policy2logic/blob/main/training/colab_training.ipynb) |
 | **Experiment Tracking** | [Weights & Biases Dashboard](https://wandb.ai/godreignelgin-sri-krishna-college-of-technology-org/policy-to-logic-rl) |
-| **Video Walkthrough** | [YouTube](https://youtu.be/bQliR2nl2S8) |
+| **Video Walkthrough** | [YouTube](https://youtu.be/n23mS0eRc8c) |
 | **Write-up** | [Medium Blog](https://medium.com/@godreignelgin/policy-to-logic-rl-environment-61da6176ff9c) |
 
 ---
